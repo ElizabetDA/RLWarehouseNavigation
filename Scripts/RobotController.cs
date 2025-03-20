@@ -1,6 +1,5 @@
 using System;
 using System.Collections;
-using System.Threading;
 using UnityEngine;
 
 public class RobotController : MonoBehaviour
@@ -9,6 +8,8 @@ public class RobotController : MonoBehaviour
     public float RotationSpeed = 90f;
     public float MoveSpeed = 2f;
     public int MaxMoveDistance = 1;
+
+    public float CellSize = 1f;
 
 
     [SerializeField] private bool hasCargo = false;
@@ -27,14 +28,13 @@ public class RobotController : MonoBehaviour
         animator = GetComponent<Animator>();
         targetRotation = transform.rotation;
         targetPosition = transform.position;
-        RotateTo(3);
+        MoveTo(new Vector2(9, 9));
+    
     }
 
     void Update()
     {
-        
-        MoveTo(new Vector2(2, -5));
-        MoveTo(new Vector2(3, 3));
+    
     }
 
 
@@ -46,22 +46,21 @@ public class RobotController : MonoBehaviour
             return;
         }
 
-
-        targetPosition = new Vector3(target.x, transform.position.y, target.y);
+        targetPosition = new Vector3(target.x * CellSize + CellSize / 2, transform.position.y, -target.y * CellSize - CellSize / 2);
 
         if(targetPosition == transform.position) return;
 
         Vector3 direction = targetPosition - transform.position;
-        if(direction.magnitude > MaxMoveDistance) 
+        
+        if(direction.magnitude > MaxMoveDistance * CellSize) 
         {
-            targetPosition = transform.position + direction.normalized * MaxMoveDistance;
+            targetPosition = transform.position + CellSize * MaxMoveDistance * direction.normalized;
             direction = targetPosition - transform.position;
         }
 
-        Debug.Log($"Current position: {transform.position}, Target: {targetPosition}");
         if(Animations)
         {
-            animator.SetFloat("Move", direction.magnitude);
+            animator.SetInteger("Move", (int)Math.Floor(direction.magnitude / CellSize));
         }
         else
         {
