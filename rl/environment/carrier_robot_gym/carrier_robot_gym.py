@@ -53,7 +53,7 @@ class CarrierRobotEnv(gymnasium.Env):
 
         # start TODO
         # Поиск максимально отдаленной ячейки(для дообучения)
-        # self.target = self.find_the_most_remote_cell(self.pos, CELL_BUSY)
+        self.target = self.find_the_most_remote_cell(self.pos, CELL_BUSY)
 
         # end
 
@@ -124,7 +124,7 @@ class CarrierRobotEnv(gymnasium.Env):
             (0, 1),  # Вправо
             (-1, 0),  # Вверх
             (0, -1)  # Влево
-        ][action], 0, [self.height - 1, self.width - 1])
+        ][action], -1, [self.height + 1, self.width + 1])
 
     def generate_new_field(self, width, height) -> np.ndarray:
         wall_density = random.uniform(0.3, 0.5)

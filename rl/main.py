@@ -139,7 +139,6 @@ def play(version: str, width: int = 10, height: int = 10, count_agents: int = 3)
             action, state = model.predict(envs[i].get_obs())
             print(i + 1, '---', action)
             obs, reward, terminated, _, info = envs[i].step(action)
-            # print(reward, obs['field'])
 
             field = obs['field']
             render(envs, field, width, height)
@@ -215,9 +214,9 @@ def render(envs, field, width: int = 10, height: int = 10) -> None:
     plt.xlim(0, width)
     plt.ylim(height, 0)
     plt.gca().set_aspect('equal')
-    plt.pause(0.5)
+    plt.pause(0.01)
 
 
 if __name__ == '__main__':
-    play(version="models/CarrierRobot v40 10x10 97m.zip", width=10, height=10, count_agents=1)
+    play(version="models/CarrierRobot v58 5x5 180m.zip", width=5, height=5, count_agents=1)
     # learn(10, 10)
