@@ -73,4 +73,10 @@ crashlytics-build.properties
 
 # Temporary auto-generated Android Assets
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
-/[Aa]ssets/[Ss]treamingAssets/aa/*
+/[Aa]ssets/[Ss]treamingAssets/aa/***/.idea/**
+**/.vscode/**
+**/cmake-build-debug/**
+**.exe
+**/build/**
+**/.venv/**
+**/venv/**
