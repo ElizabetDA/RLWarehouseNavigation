@@ -10,12 +10,12 @@ public class AStarTests
     [Test]
     public void AStar_SimplePathNoObstacles_CorrectPath()
     {
-        int[][] environment = {
-            new[] {0, 0, 0},
-            new[] {0, 0, 0},
-            new[] {0, 0, 0}
+        int[,] environment = {
+            {0, 0, 0},
+            {0, 0, 0},
+            {0, 0, 0}
         };
-        var (path, _) = ExecuteTest(environment, new Vector2(0, 0), new Vector2(2, 2));
+        var (path, _) = ExecuteTest(environment, new Vector2Int(0, 0), new Vector2Int(2, 2));
         Assert.AreEqual(5, path.Count);
     }
 
@@ -24,7 +24,7 @@ public class AStarTests
     {
         int size = 9;
         var env = CreateSpiralMaze(size);
-        var (path, _) = ExecuteTest(env, new Vector2(0, 0), new Vector2(size-1, size-1));
+        var (path, _) = ExecuteTest(env, new Vector2Int(0, 0), new Vector2Int(size-1, size-1));
         Assert.IsNotNull(path);
     }
 
@@ -32,7 +32,7 @@ public class AStarTests
     public void AStar_MultipleDeadEnds_FindsPath()
     {
         var env = CreateDeadEndMaze(11, 11);
-        var (path, _) = ExecuteTest(env, new Vector2(0, 0), new Vector2(10, 10));
+        var (path, _) = ExecuteTest(env, new Vector2Int(0, 0), new Vector2Int(10, 10));
         Assert.IsNotNull(path);
     }
 
@@ -40,7 +40,7 @@ public class AStarTests
     public void AStar_RandomObstacles_FindsPath()
     {
         var env = CreateRandomObstacles(20, 20, 0.25f);
-        var (path, map) = ExecuteTest(env, new Vector2(0, 0), new Vector2(19, 19));
+        var (path, _) = ExecuteTest(env, new Vector2Int(0, 0), new Vector2Int(19, 19));
         Assert.IsNotNull(path);
     }
 
@@ -48,114 +48,98 @@ public class AStarTests
 
     #region Map Generators
 
-    private int[][] CreateDeadEndMaze(int width, int height)
+    private int[,] CreateDeadEndMaze(int width, int height)
     {
-        int[][] env = new int[height][];
+        int[,] env = new int[height, width];
         for (int y = 0; y < height; y++)
         {
-            env[y] = new int[width];
             for (int x = 0; x < width; x++)
             {
                 bool isWall = (x % 3 != 0) && (y % 3 != 0);
-                env[y][x] = isWall ? 1 : 0;
+                env[y, x] = isWall ? 1 : 0;
             }
         }
         return env;
     }
 
-private int[][] CreateSpiralMaze(int size)
-{
-    int[][] env = new int[size][];
-    for (int y = 0; y < size; y++)
+    private int[,] CreateSpiralMaze(int size)
     {
-        env[y] = new int[size];
-        for (int x = 0; x < size; x++)
+        int[,] env = new int[size, size];
+        for (int y = 0; y < size; y++)
         {
-            // Создаем спираль с явным проходом
-            bool isWall = (x > 0 && x < size-1 && y > 0 && y < size-1) && 
-                         !(x == 1 && y < size-2) && 
-                         !(y == size-2 && x < size-2) && 
-                         !(x == size-2 && y > 1);
-            env[y][x] = isWall ? 1 : 0;
+            for (int x = 0; x < size; x++)
+            {
+                bool isWall = (x > 0 && x < size-1 && y > 0 && y < size-1) && 
+                             !(x == 1 && y < size-2) && 
+                             !(y == size-2 && x < size-2) && 
+                             !(x == size-2 && y > 1);
+                env[y, x] = isWall ? 1 : 0;
+            }
         }
+        return env;
     }
-    return env;
-}
-private int[][] CreateRandomObstacles(int width, int height, float density)
-{
-    var rand = new System.Random();
-    int[][] env = new int[height][];
-    
-    // Гарантированный проход
-    for (int y = 0; y < height; y++)
+
+    private int[,] CreateRandomObstacles(int width, int height, float density)
     {
-        env[y] = new int[width];
-        for (int x = 0; x < width; x++)
+        var rand = new System.Random();
+        int[,] env = new int[height, width];
+        
+        for (int y = 0; y < height; y++)
         {
-            // Явный проход по краям
-            bool isBorder = x == 0 || y == 0 || x == width-1 || y == height-1;
-            env[y][x] = isBorder ? 0 : (rand.NextDouble() < density ? 1 : 0);
+            for (int x = 0; x < width; x++)
+            {
+                bool isBorder = x == 0 || y == 0 || x == width-1 || y == height-1;
+                env[y, x] = isBorder ? 0 : (rand.NextDouble() < density ? 1 : 0);
+            }
         }
+        
+        for (int i = 0; i < width; i++)
+        {
+            env[width/2, i] = 0;
+            env[i, height/2] = 0;
+        }
+        
+        return env;
     }
-    
-    // Дополнительный центральный проход
-    for (int i = 0; i < width; i++)
-    {
-        env[width/2][i] = 0;
-        env[i][height/2] = 0;
-    }
-    
-    return env;
-}
 
     #endregion
 
     #region Test Execution
 
-    private (List<int> path, int[][] env) ExecuteTest(int[][] environment, Vector2 start, Vector2 end)
+    private (List<Vector2Int> path, int[,] env) ExecuteTest(int[,] environment, Vector2Int start, Vector2Int end)
     {
-        // Гарантия свободных старта и финиша
-        environment[(int)start.y][(int)start.x] = 0;
-        environment[(int)end.y][(int)end.x] = 0;
+        environment[start.y, start.x] = 0;
+        environment[end.y, end.x] = 0;
 
         var path = AStarSearch.AStarSearch.AStar(environment, start, end);
         ValidatePath(environment, start, end, path);
         return (path, environment);
     }
 
-    private void ValidatePath(int[][] grid, Vector2 start, Vector2 end, List<int> path)
+    private void ValidatePath(int[,] grid, Vector2Int start, Vector2Int end, List<Vector2Int> path)
     {
         if (path == null) return;
 
-        int width = grid[0].Length;
-        
-        // Проверка начальной и конечной точек
-        Assert.AreEqual(0, grid[(int)start.y][(int)start.x], "Start blocked");
-        Assert.AreEqual(0, grid[(int)end.y][(int)end.x], "End blocked");
+        int width = grid.GetLength(1);
+        int height = grid.GetLength(0);
 
-        // Проверка непрерывности пути
+        Assert.AreEqual(0, grid[start.y, start.x], "Start blocked");
+        Assert.AreEqual(0, grid[end.y, end.x], "End blocked");
+
         for (int i = 1; i < path.Count; i++)
         {
-            Vector2 prev = IndexToPos(path[i-1], width);
-            Vector2 curr = IndexToPos(path[i], width);
-            float dist = Vector2.Distance(prev, curr);
-            Assert.AreEqual(1f, dist, $"Invalid step: {prev} -> {curr}");
+            Vector2Int prev = path[i-1];
+            Vector2Int curr = path[i];
+            int dx = Mathf.Abs(curr.x - prev.x);
+            int dy = Mathf.Abs(curr.y - prev.y);
+            Assert.IsTrue(dx + dy == 1, $"Invalid step: {prev} -> {curr}");
         }
 
-        // Проверка препятствий
-        foreach (int index in path)
+        foreach (Vector2Int pos in path)
         {
-            Vector2 pos = IndexToPos(index, width);
-            Assert.AreEqual(0, grid[(int)pos.y][(int)pos.x], $"Path through wall at {pos}");
+            Assert.AreEqual(0, grid[pos.y, pos.x], $"Path through wall at {pos}");
         }
     }
-
-    #endregion
-
-    #region Helpers
-
-    private int PosToIndex(Vector2 pos, int width) => (int)(pos.x + pos.y * width);
-    private Vector2 IndexToPos(int index, int width) => new Vector2(index % width, index / width);
 
     #endregion
 }

@@ -8,182 +8,130 @@ namespace AStarSearch
 {
     public static class AStarSearch
     {
-        public static List<int> AStar(int[][] environmentMatrix, Vector2 start, Vector2 end)
+        public static List<Vector2Int> AStar(int[,] environmentMatrix, Vector2Int start, Vector2Int end)
         {
-            Node endCell = new Node((int)end.x, (int)end.y);
-            Node startCell = new Node((int)start.x, (int)start.y, endCell, null);
+            Node endCell = new Node(end.x, end.y);
+            Node startCell = new Node(start.x, start.y, endCell, null);
 
-            PriorityQueue<Node, int>
-                openList = new PriorityQueue<Node, int>(); // Очередь с приоритетом для открытых узлов
-            Dictionary<Node, Node> openListSet = new Dictionary<Node, Node>(); // Множество открытых узлов
+            PriorityQueue<Node, int> openList = new PriorityQueue<Node, int>();
+            Dictionary<Node, Node> openListSet = new Dictionary<Node, Node>();
             openList.Enqueue(startCell, startCell.LenPathThrough);
             openListSet.Add(startCell, startCell);
 
-            HashSet<Node> closedList = new HashSet<Node>(); // Множество закрытых (проверенных узлов)
+            HashSet<Node> closedList = new HashSet<Node>();
+            
+            int matrixWidth = environmentMatrix.GetLength(1);
+            int matrixHeight = environmentMatrix.GetLength(0);
+
             while (openList.Count > 0)
             {
                 Node currentNode = openList.Dequeue();
                 openListSet.Remove(currentNode);
 
-                if (currentNode == endCell) // Если текущий узел конечный, то восстанавливаем путь
+                if (currentNode == endCell)
                 {
-                    List<int> path = new List<int>();
+                    List<Vector2Int> path = new List<Vector2Int>();
                     while (currentNode != null)
                     {
-                        int coord = currentNode.X + currentNode.Y * environmentMatrix[0].Length;
-                        path.Add(coord);
+                        path.Add(new Vector2Int(currentNode.X, currentNode.Y));
                         currentNode = currentNode.Parent;
                     }
-
                     path.Reverse();
                     return path;
                 }
 
-                closedList.Add(currentNode); //  Иначе этот узел убираем в проверенные и обрабатываем его соседей
+                closedList.Add(currentNode);
 
                 List<Node> neighbors = new List<Node>();
-                for (int i = -2; i <= 2; i++) // Генерация всех допустимых соседей
+                Vector2Int[] directions = {
+                    new Vector2Int(-1, 0),
+                    new Vector2Int(1, 0),
+                    new Vector2Int(0, 1),
+                    new Vector2Int(0, -1)
+                };
+
+                foreach (Vector2Int dir in directions)
                 {
-                    if (i == 0)
+                    int x = currentNode.X + dir.x;
+                    int y = currentNode.Y + dir.y;
+
+                    if (x >= 0 && x < matrixWidth && 
+                        y >= 0 && y < matrixHeight && 
+                        environmentMatrix[y, x] == 0)
                     {
-                        continue;
+                        neighbors.Add(new Node(x, y, endCell, currentNode));
                     }
-
-                    int x = currentNode.X + (i / 2);
-                    int y = currentNode.Y + (i % 2);
-
-                    if (x < 0 || x >= environmentMatrix[0].Length || y < 0 || y >= environmentMatrix.Length ||
-                        environmentMatrix[y][x] != 0)
-                    {
-                        continue;
-                    }
-
-                    Node neighbor = new Node(x, y, endCell, currentNode);
-                    neighbors.Add(neighbor);
                 }
 
-                foreach (Node t in neighbors) // Проверка соседей
+                foreach (Node neighbor in neighbors)
                 {
-                    if (closedList.Contains(t))
-                    {
-                        continue;
-                    }
+                    if (closedList.Contains(neighbor)) continue;
 
                     int newG = currentNode.DistanceFromStart;
-                    if (openListSet.TryGetValue(t, out Node element)) // Если сосед уже находится в открытых узлах
+                    if (openListSet.TryGetValue(neighbor, out Node existingNode))
                     {
-                        if (newG < element.DistanceFromStart) // и если длина пройденного пути предыдущего родителя была больше
+                        if (newG < existingNode.DistanceFromStart)
                         {
-                            element.ChangeParent(currentNode); // то изменяем родителя и длину пути соответствующего узла
-                            UpdateElement(openList, element);
+                            existingNode.ChangeParent(currentNode);
+                            UpdateElement(openList, existingNode);
                         }
                     }
-                    else // Иначе просто добавляем в открытые узлы
+                    else
                     {
-                        openList.Enqueue(t, t.LenPathThrough);
-                        openListSet.Add(t, t);
+                        openList.Enqueue(neighbor, neighbor.LenPathThrough);
+                        openListSet.Add(neighbor, neighbor);
                     }
                 }
             }
-
-            return null; // Возвращается если в цикле не была достигнута конечная клетка
+            return null;
         }
 
-        private static void UpdateElement(PriorityQueue<Node, int> queue, Node elementToUpdate) // Обновление очереди в
+        private static void UpdateElement(PriorityQueue<Node, int> queue, Node elementToUpdate)
         {
-            List<(Node Element, int Priority)> items = queue.UnorderedItems.ToList();  // связи с изменением родителя
-            queue.Clear();                                                             // одного из элементов
-            foreach ((Node Element, int Priority) item in items)
+            var items = queue.UnorderedItems.ToList();
+            queue.Clear();
+            foreach (var item in items)
             {
-                if (!item.Element.Equals(elementToUpdate))
-                {
-                    queue.Enqueue(item.Element, item.Priority);
-                }
-                else
-                {
-                    queue.Enqueue(elementToUpdate, elementToUpdate.LenPathThrough);
-                }
+                queue.Enqueue(
+                    item.Element.Equals(elementToUpdate) ? elementToUpdate : item.Element,
+                    item.Element.Equals(elementToUpdate) ? elementToUpdate.LenPathThrough : item.Priority
+                );
             }
         }
     }
 
-    class Node
+    internal class Node
     {
-        public int X { get; } // Координата по абсциссе
-        public int Y { get; } // Координата по ординате
-        public int DistanceFromStart { get; private set; } // Длина маршрута пройденного от начала до этой клетки
-        private int _distanceToEnd; // Минимально возможная длина пути от этой до конечной клетки (Без учёта препятствий)
-        public int LenPathThrough { get; private set; } // Предполагаемая длина пути от начальной до конечной клетки
-        public Node Parent; // Предыдущая клетка пути начальная - эта клетка
+        public int X { get; }
+        public int Y { get; }
+        public int DistanceFromStart { get; private set; }
+        private readonly int _distanceToEnd;
+        public int LenPathThrough { get; private set; }
+        public Node Parent;
 
-        public Node(int x, int y)
+        public Node(int x, int y, Node end = null, Node parent = null)
         {
             X = x;
             Y = y;
-            Parent = null;
-        }
-
-        public Node(int x, int y, Node end, Node parent)
-        {
-            X = x;
-            Y = y;
-            _distanceToEnd = Mathf.Abs(end.X - x) + Mathf.Abs(end.Y - y);
-            DistanceFromStart = parent is null ? 0 : parent.DistanceFromStart + 1;
             Parent = parent;
-            LenPathThrough = _distanceToEnd + DistanceFromStart;
-        }
-
-        public override bool Equals(object obj)
-        {
-            if (obj is null || GetType() != obj.GetType())
+            
+            if (end != null)
             {
-                return false;
+                _distanceToEnd = Math.Abs(end.X - x) + Math.Abs(end.Y - y);
+                DistanceFromStart = parent?.DistanceFromStart + 1 ?? 0;
+                LenPathThrough = _distanceToEnd + DistanceFromStart;
             }
-
-            Node other = (Node)obj;
-            return X == other.X && Y == other.Y;
         }
 
-        public override int GetHashCode()
+        public override bool Equals(object obj) => obj is Node n && X == n.X && Y == n.Y;
+        public override int GetHashCode() => HashCode.Combine(X, Y);
+        public static bool operator ==(Node a, Node b) => a?.Equals(b) ?? b is null;
+        public static bool operator !=(Node a, Node b) => !(a == b);
+
+        public void ChangeParent(Node newParent)
         {
-            return HashCode.Combine(X, Y);
-        }
-
-
-        public static bool operator >(Node n1, Node n2)
-        {
-            return n1.LenPathThrough > n2.LenPathThrough;
-        }
-
-        public static bool operator <(Node n1, Node n2)
-        {
-            return n2 > n1;
-        }
-
-        public static bool operator ==(Node n1, Node n2)
-        {
-            if (n1 is null && n2 is null)
-            {
-                return true;
-            }
-
-            if (n1 is null || n2 is null)
-            {
-                return false;
-            }
-
-            return n1.X == n2.X && n1.Y == n2.Y;
-        }
-
-        public static bool operator !=(Node n1, Node n2)
-        {
-            return !(n1 == n2);
-        }
-
-        public void ChangeParent(Node parent) // Изменение родителя клетки на parent и перерасчёт DistanceFromStart и LenPathThrough
-        {
-            DistanceFromStart = parent.DistanceFromStart + 1;
-            Parent = parent;
+            Parent = newParent;
+            DistanceFromStart = newParent.DistanceFromStart + 1;
             LenPathThrough = DistanceFromStart + _distanceToEnd;
         }
     }

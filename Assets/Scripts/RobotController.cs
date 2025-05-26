@@ -28,7 +28,7 @@ public class RobotController : MonoBehaviour
         animator = GetComponent<Animator>();
         targetRotation = transform.rotation;
         targetPosition = transform.position;
-        MoveTo(new Vector2(9, 9));
+        // MoveTo(new Vector2(9, 9));
     
     }
 
